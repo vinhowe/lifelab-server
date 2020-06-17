@@ -15,28 +15,24 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework import routers
-from rest_framework_extensions.routers import NestedRouterMixin
+from rest_framework_nested import routers
 
 from api import views
-from api.views import IssueCommentViewSet
 
 
-class NestedDefaultRouter(NestedRouterMixin, routers.DefaultRouter):
-    pass
-
-
-router = NestedDefaultRouter()
+router = routers.SimpleRouter()
 router.register("users", views.UserViewSet)
 router.register("groups", views.GroupViewSet)
-issues_router = router.register("issues", views.IssueViewSet)
+labs_router = router.register("labs", views.LabViewSet)
+issues_router = labs_router.register(
+    "issues", views.IssueViewSet, basename="lab-issues", parents_query_lookups=["lab"]
+)
 issues_router.register(
     "comments",
-    IssueCommentViewSet,
+    views.IssueCommentViewSet,
     basename="issue-comments",
-    parents_query_lookups=["issue"],
+    parents_query_lookups=["lab", "issue"]
 )
-router.register("labs", views.LabViewSet)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
