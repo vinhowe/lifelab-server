@@ -1,41 +1,28 @@
 """lifelab_server URL Configuration
-
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/3.0/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
 from django.urls import path, include
+from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
 
 from api import views
+from api.views import LabIssueViewSet, IssueCommentViewSet
 
+API_BASE = "api/dev/"
 
-router = routers.SimpleRouter()
-router.register("users", views.UserViewSet)
-router.register("groups", views.GroupViewSet)
-labs_router = router.register("labs", views.LabViewSet)
-issues_router = labs_router.register(
-    "issues", views.IssueViewSet, basename="lab-issues", parents_query_lookups=["lab"]
-)
-issues_router.register(
-    "comments",
-    views.IssueCommentViewSet,
-    basename="issue-comments",
-    parents_query_lookups=["lab", "issue"]
-)
+router = DefaultRouter()
+router.register("labs", views.LabViewSet)
+
+labs_router = routers.NestedSimpleRouter(router, "labs", lookup="lab")
+labs_router.register("issues", LabIssueViewSet, basename="issues")
+
+issues_router = routers.NestedSimpleRouter(labs_router, "issues", lookup="issue")
+issues_router.register("comments", IssueCommentViewSet, basename="issue-comments")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    path("api/dev/", include(router.urls)),
+    path(API_BASE, include(router.urls)),
+    path(API_BASE, include(labs_router.urls)),
+    path(API_BASE, include(issues_router.urls)),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
 ]

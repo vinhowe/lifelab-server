@@ -1,52 +1,34 @@
-from django.contrib.auth.models import User, Group
 from rest_framework import viewsets
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework_extensions.mixins import NestedViewSetMixin
 
 from api.models import Issue, Lab, IssueComment
-from api.serializers import UserSerializer, GroupSerializer, IssueSerializer, \
-    LabSerializer, IssueCommentSerializer
-
-
-class UserViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows users to be viewed or edited.
-    """
-    queryset = User.objects.all().order_by('-date_joined')
-    serializer_class = UserSerializer
-
-
-class GroupViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows groups to be viewed or edited
-    """
-    queryset = Group.objects.all()
-    serializer_class = GroupSerializer
+from api.serializers import (
+    IssueSerializer,
+    LabSerializer,
+    IssueCommentSerializer,
+)
 
 
 class LabViewSet(viewsets.ModelViewSet):
     queryset = Lab.objects.all()
     serializer_class = LabSerializer
+    pagination_class = None
 
 
-class IssueCommentViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
-    queryset = IssueComment.objects.all()
-    serializer_class = IssueCommentSerializer
+class LabIssueViewSet(viewsets.ModelViewSet):
+    def get_queryset(self):
+        return Issue.objects.filter(lab=self.kwargs["lab_pk"], deleted=False)
 
-
-class IssueViewSet(NestedViewSetMixin, viewsets.ModelViewSet):
-    queryset = Issue.objects.all()
+    lookup_field = "number"
     serializer_class = IssueSerializer
+    pagination_class = None
 
-    # @action(detail=True)
-    # def comments(self, request, pk):
-    #     comments = IssueComment.objects.filter(issue=pk)
-    #
-    #     page = self.paginate_queryset(comments)
-    #     if page is not None:
-    #         serializer = self.get_serializer(page, many=True)
-    #         return self.get_paginated_response(serializer.data)
-    #
-    #     serializer = self.get_serializer(comments, many=True)
-    #     return Response(serializer.data)
+
+class IssueCommentViewSet(viewsets.ModelViewSet):
+    def get_queryset(self):
+        return IssueComment.objects.filter(
+            issue__lab=self.kwargs["lab_pk"],
+            issue=self.kwargs["issue_number"]
+        )
+
+    serializer_class = IssueCommentSerializer
+    pagination_class = None
