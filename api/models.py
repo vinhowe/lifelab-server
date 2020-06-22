@@ -49,7 +49,7 @@ class Lab(models.Model):
 class Issue(Deletable, WithCreatedDateTime):
     state = models.CharField(max_length=10, choices=ISSUE_STATE_CHOICES, default=OPEN)
     title = models.CharField(max_length=MAX_TITLE_TEXT_LENGTH)
-    description = models.CharField(max_length=MAX_BODY_TEXT_LENGTH)
+    description = models.CharField(max_length=MAX_BODY_TEXT_LENGTH, default="")
     number = models.IntegerField(default=1, editable=False)
     lab = models.ForeignKey(Lab, on_delete=models.CASCADE, related_name="issues")
 

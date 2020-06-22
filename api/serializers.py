@@ -5,7 +5,7 @@ from rest_framework_nested.relations import (
     NestedHyperlinkedIdentityField,
 )
 
-from api.models import Issue, Lab, IssueComment
+from api.models import Issue, Lab, IssueComment, MAX_BODY_TEXT_LENGTH
 
 
 class LabSerializer(serializers.HyperlinkedModelSerializer):
@@ -29,13 +29,14 @@ class IssueSerializer(serializers.HyperlinkedModelSerializer):
         parent_lookup_kwargs={"lab_pk": "lab__pk"},
         lookup_field="number",
     )
+    description = serializers.CharField(
+        max_length=MAX_BODY_TEXT_LENGTH, allow_blank=True, required=False
+    )
 
     def create(self, validated_data):
         context_kwargs = self.context["view"].kwargs
         lab = Lab.objects.get(pk=context_kwargs["lab_pk"])
-        instance = Issue.objects.create(
-            **validated_data, lab=lab
-        )
+        instance = Issue.objects.create(**validated_data, lab=lab)
         # instance.issue =
         return instance
 
@@ -48,11 +49,12 @@ class IssueSerializer(serializers.HyperlinkedModelSerializer):
             "state",
             "title",
             "description",
+            "created",
             "comments",
             "lab",
             "deleted",
         ]
-        read_only_fields = ["lab"]
+        read_only_fields = ["lab", "created"]
 
 
 class IssueCommentSerializer(serializers.HyperlinkedModelSerializer):
