@@ -1,10 +1,10 @@
 from rest_framework import viewsets
 
-from api.models import Issue, Lab, IssueComment
+from api.models import Issue, Lab, IssueComment, Experiment
 from api.serializers import (
     IssueSerializer,
     LabSerializer,
-    IssueCommentSerializer,
+    IssueCommentSerializer, ExperimentSerializer,
 )
 
 
@@ -20,6 +20,15 @@ class LabIssueViewSet(viewsets.ModelViewSet):
 
     lookup_field = "number"
     serializer_class = IssueSerializer
+    pagination_class = None
+
+
+class LabExperimentViewSet(viewsets.ModelViewSet):
+    def get_queryset(self):
+        return Experiment.objects.filter(lab=self.kwargs["lab_pk"], deleted=False)
+
+    lookup_field = "number"
+    serializer_class = ExperimentSerializer
     pagination_class = None
 
 

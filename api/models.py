@@ -64,7 +64,7 @@ class Issue(Deletable, WithCreatedDateTime):
         ]
 
     @classmethod
-    def generate_number(cls, sender, instance, **kwargs) -> int:
+    def generate_number(cls, sender, instance, **kwargs) -> None:
         if not instance.pk:
             try:
                 instance.number = (
@@ -94,9 +94,7 @@ class IssueStateHistoryItem(WithCreatedDateTime):
 
 class IssueComment(Deletable, WithCreatedDateTime):
     body = models.CharField(max_length=MAX_BODY_TEXT_LENGTH)
-    issue = models.ForeignKey(
-        Issue, on_delete=models.CASCADE, related_name="comments"
-    )
+    issue = models.ForeignKey(Issue, on_delete=models.CASCADE, related_name="comments")
 
 
 class IssueCommentHistoryItem(WithCreatedDateTime):
@@ -119,8 +117,9 @@ class Experiment(Deletable, WithCreatedDateTime):
     title = models.CharField(max_length=MAX_TITLE_TEXT_LENGTH)
     issues = models.ManyToManyField(Issue, related_name="experiments")
     terms = models.CharField(max_length=MAX_BODY_TEXT_LENGTH)
+    description = models.CharField(max_length=MAX_BODY_TEXT_LENGTH)
     end_date = models.DateField()
-    number = models.IntegerField(editable=False)
+    number = models.IntegerField(editable=False, default=1)
     lab = models.ForeignKey(Lab, on_delete=models.CASCADE, related_name="experiments")
 
     class Meta:
@@ -132,6 +131,17 @@ class Experiment(Deletable, WithCreatedDateTime):
                 check=models.Q(number__gte=1), name="experiment_number_gte_1"
             ),
         ]
+
+    @classmethod
+    def generate_number(cls, sender, instance, **kwargs) -> None:
+        if not instance.pk:
+            try:
+                instance.number = (
+                    cls.objects.filter(lab=instance.lab).order_by("-number")[0].number
+                    + 1
+                )
+            except IndexError:
+                pass
 
 
 class ExperimentTermsHistoryItem(WithCreatedDateTime):
@@ -155,3 +165,4 @@ class ExperimentEndDateHistoryItem(WithCreatedDateTime):
 
 
 pre_save.connect(Issue.generate_number, sender=Issue)
+pre_save.connect(Experiment.generate_number, sender=Experiment)
