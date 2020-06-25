@@ -4,8 +4,15 @@ from api.models import Issue, Lab, IssueComment, Experiment
 from api.serializers import (
     IssueSerializer,
     LabSerializer,
-    IssueCommentSerializer, ExperimentSerializer,
+    IssueCommentSerializer,
+    ExperimentSerializer,
 )
+
+
+class ArchiveDeleteMixin:
+    def perform_destroy(self, instance) -> None:
+        instance.deleted = True
+        instance.save()
 
 
 class LabViewSet(viewsets.ModelViewSet):
@@ -14,7 +21,7 @@ class LabViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
 
-class LabIssueViewSet(viewsets.ModelViewSet):
+class LabIssueViewSet(ArchiveDeleteMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         return Issue.objects.filter(lab=self.kwargs["lab_pk"], deleted=False)
 
@@ -23,7 +30,7 @@ class LabIssueViewSet(viewsets.ModelViewSet):
     pagination_class = None
 
 
-class LabExperimentViewSet(viewsets.ModelViewSet):
+class LabExperimentViewSet(ArchiveDeleteMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         return Experiment.objects.filter(lab=self.kwargs["lab_pk"], deleted=False)
 
@@ -35,8 +42,7 @@ class LabExperimentViewSet(viewsets.ModelViewSet):
 class IssueCommentViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return IssueComment.objects.filter(
-            issue__lab=self.kwargs["lab_pk"],
-            issue=self.kwargs["issue_number"]
+            issue__lab=self.kwargs["lab_pk"], issue=self.kwargs["issue_number"]
         )
 
     serializer_class = IssueCommentSerializer

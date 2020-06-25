@@ -113,7 +113,7 @@ class Experiment(Deletable, WithCreatedDateTime):
         (ACTIVE, "Active"),
         (COMMITTED, "Committed"),
     ]
-    state = models.CharField(max_length=10, choices=STATE_CHOICES, default=INACTIVE)
+    state = models.CharField(max_length=10, choices=STATE_CHOICES, default=ACTIVE)
     title = models.CharField(max_length=MAX_TITLE_TEXT_LENGTH)
     issues = models.ManyToManyField(Issue, related_name="experiments")
     terms = models.CharField(max_length=MAX_BODY_TEXT_LENGTH)
