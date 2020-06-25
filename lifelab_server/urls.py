@@ -27,4 +27,4 @@ urlpatterns = [
     path(API_BASE, include(labs_router.urls)),
     path(API_BASE, include(issues_router.urls)),
     path("api-auth/", include("rest_framework.urls", namespace="rest_framework")),
-]
+    ]
