@@ -164,5 +164,37 @@ class ExperimentEndDateHistoryItem(WithCreatedDateTime):
     )
 
 
+class CheckIn(WithCreatedDateTime, Deletable):
+    lab = models.ForeignKey(Lab, on_delete=models.CASCADE, related_name="check_ins")
+    experiments = models.ManyToManyField(
+        Experiment, related_name="check_ins", blank=True
+    )
+    retrospective = models.CharField(max_length=MAX_BODY_TEXT_LENGTH, blank=True)
+    number = models.IntegerField(editable=False, default=1)
+    complete = models.BooleanField(default=False)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["number", "lab"], name="check_in_unique_number_in_lab"
+            ),
+            models.CheckConstraint(
+                check=models.Q(number__gte=1), name="check_in_number_gte_1"
+            ),
+        ]
+
+    @classmethod
+    def generate_number(cls, sender, instance, **kwargs) -> None:
+        if not instance.pk:
+            try:
+                instance.number = (
+                    cls.objects.filter(lab=instance.lab).order_by("-number")[0].number
+                    + 1
+                )
+            except IndexError:
+                pass
+
+
 pre_save.connect(Issue.generate_number, sender=Issue)
 pre_save.connect(Experiment.generate_number, sender=Experiment)
+pre_save.connect(CheckIn.generate_number, sender=CheckIn)

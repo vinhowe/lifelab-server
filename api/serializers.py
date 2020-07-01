@@ -1,11 +1,18 @@
 from rest_framework import serializers
-from rest_framework.relations import HyperlinkedIdentityField
+from rest_framework.relations import HyperlinkedIdentityField, HyperlinkedRelatedField
 from rest_framework_nested.relations import (
     NestedHyperlinkedRelatedField,
     NestedHyperlinkedIdentityField,
 )
 
-from api.models import Issue, Lab, IssueComment, MAX_BODY_TEXT_LENGTH, Experiment
+from api.models import (
+    Issue,
+    Lab,
+    IssueComment,
+    MAX_BODY_TEXT_LENGTH,
+    Experiment,
+    CheckIn,
+)
 
 
 class LabSerializer(serializers.HyperlinkedModelSerializer):
@@ -15,10 +22,13 @@ class LabSerializer(serializers.HyperlinkedModelSerializer):
     experiments = HyperlinkedIdentityField(
         view_name="experiments-list", lookup_url_kwarg="lab_pk", lookup_field="pk"
     )
+    check_ins = HyperlinkedIdentityField(
+        view_name="check-ins-list", lookup_url_kwarg="lab_pk", lookup_field="pk"
+    )
 
     class Meta:
         model = Lab
-        fields = ["id", "url", "issues", "experiments"]
+        fields = ["id", "url", "issues", "experiments", "check_ins"]
 
 
 class ExperimentSerializer(serializers.HyperlinkedModelSerializer):
@@ -72,6 +82,13 @@ class IssueSerializer(serializers.HyperlinkedModelSerializer):
     description = serializers.CharField(
         max_length=MAX_BODY_TEXT_LENGTH, allow_blank=True, required=False
     )
+    experiments = HyperlinkedRelatedField(
+        many=True,
+        queryset=Experiment.objects.all(),
+        view_name="experiments-list",
+        lookup_url_kwarg="lab_pk",
+        lookup_field="pk",
+    )
 
     def create(self, validated_data):
         context_kwargs = self.context["view"].kwargs
@@ -88,8 +105,52 @@ class IssueSerializer(serializers.HyperlinkedModelSerializer):
             "state",
             "title",
             "description",
+            "experiments",
             "created",
             "comments",
+            "lab",
+            "deleted",
+        ]
+        read_only_fields = ["lab", "created"]
+
+
+class CheckInSerializer(serializers.HyperlinkedModelSerializer):
+    url = NestedHyperlinkedIdentityField(
+        view_name="check-ins-detail",
+        parent_lookup_kwargs={"lab_pk": "lab__pk"},
+        lookup_field="number",
+    )
+    retrospective = serializers.CharField(
+        max_length=MAX_BODY_TEXT_LENGTH, allow_blank=True, required=False
+    )
+    experiments = NestedHyperlinkedRelatedField(
+        many=True,
+        queryset=Experiment.objects.all(),
+        view_name="experiments-detail",
+        parent_lookup_kwargs={"lab_pk": "lab__pk"},
+        lookup_url_kwarg="number",
+        required=False,
+    )
+
+    def create(self, validated_data) -> CheckIn:
+        context_kwargs = self.context["view"].kwargs
+        lab = Lab.objects.get(pk=context_kwargs["lab_pk"])
+        instance = CheckIn.objects.create(**validated_data, lab=lab)
+        instance.experiments.set(Experiment.objects.filter(
+            lab=Lab.objects.get(pk=context_kwargs["lab_pk"]), state="ACTIVE", deleted=False,
+        ))
+        return instance
+
+    class Meta:
+        model = CheckIn
+        fields = [
+            "number",
+            "id",
+            "url",
+            "complete",
+            "retrospective",
+            "experiments",
+            "created",
             "lab",
             "deleted",
         ]
