@@ -61,7 +61,7 @@ class LabCheckInViewSet(
     serializer_class = CheckInSerializer
     pagination_class = None
 
-    @action(detail=False, methods=["get", "put", "delete"])
+    @action(detail=False, methods=["get", "put", "patch", "delete"])
     def today(self, request, *args, **kwargs) -> Response:
         instances = CheckIn.objects.filter(
             created__date=datetime.today().date(), deleted=False
@@ -81,7 +81,7 @@ class LabCheckInViewSet(
                     serializer.data, status=status.HTTP_201_CREATED, headers=headers
                 )
 
-        if request.method == "PUT":
+        if request.method == "PUT" or request.method == "PATCH":
             if instance:
                 partial = kwargs.pop("partial", False)
                 serializer = self.get_serializer(
