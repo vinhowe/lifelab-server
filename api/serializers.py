@@ -82,12 +82,14 @@ class IssueSerializer(serializers.HyperlinkedModelSerializer):
     description = serializers.CharField(
         max_length=MAX_BODY_TEXT_LENGTH, allow_blank=True, required=False
     )
-    experiments = HyperlinkedRelatedField(
+    experiments = NestedHyperlinkedRelatedField(
         many=True,
         queryset=Experiment.objects.all(),
-        view_name="experiments-list",
-        lookup_url_kwarg="lab_pk",
-        lookup_field="pk",
+        view_name="experiments-detail",
+        parent_lookup_kwargs={"lab_pk": "lab__pk"},
+        lookup_url_kwarg="number",
+        lookup_field="number",
+        required=False,
     )
 
     def create(self, validated_data):
@@ -129,6 +131,7 @@ class CheckInSerializer(serializers.HyperlinkedModelSerializer):
         view_name="experiments-detail",
         parent_lookup_kwargs={"lab_pk": "lab__pk"},
         lookup_url_kwarg="number",
+        lookup_field="number",
         required=False,
     )
 
@@ -136,9 +139,13 @@ class CheckInSerializer(serializers.HyperlinkedModelSerializer):
         context_kwargs = self.context["view"].kwargs
         lab = Lab.objects.get(pk=context_kwargs["lab_pk"])
         instance = CheckIn.objects.create(**validated_data, lab=lab)
-        instance.experiments.set(Experiment.objects.filter(
-            lab=Lab.objects.get(pk=context_kwargs["lab_pk"]), state="ACTIVE", deleted=False,
-        ))
+        instance.experiments.set(
+            Experiment.objects.filter(
+                lab__pk=context_kwargs["lab_pk"],
+                deleted=False,
+                state="ACTIVE",
+            )
+        )
         return instance
 
     class Meta:
