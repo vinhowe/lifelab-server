@@ -61,7 +61,7 @@ class LabCheckInViewSet(
     serializer_class = CheckInSerializer
     pagination_class = None
 
-    @action(detail=False, methods=["get", "put", "patch", "delete"])
+    @action(detail=False, methods=["get", "put", "options", "patch", "delete"])
     def today(self, request, *args, **kwargs) -> Response:
         instances = CheckIn.objects.filter(
             created__date=datetime.today().date(), deleted=False
@@ -103,6 +103,9 @@ class LabCheckInViewSet(
             instance.deleted = True
             instance.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
+
+        if request.method == "OPTIONS":
+            return Response(status=status.HTTP_200_OK)
 
     @staticmethod
     def get_success_headers(data) -> dict:
