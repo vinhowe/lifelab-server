@@ -43,7 +43,7 @@ class WithCreatedDateTime(models.Model):
 
 
 class Lab(models.Model):
-    pass
+    queue_order = models.TextField(default="")
 
 
 class Issue(Deletable, WithCreatedDateTime):

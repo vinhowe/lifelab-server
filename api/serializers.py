@@ -1,3 +1,5 @@
+from typing import List, Dict
+
 from rest_framework import serializers
 from rest_framework.relations import HyperlinkedIdentityField, HyperlinkedRelatedField
 from rest_framework_nested.relations import (
@@ -12,7 +14,41 @@ from api.models import (
     MAX_BODY_TEXT_LENGTH,
     Experiment,
     CheckIn,
+    OPEN,
 )
+
+
+class IssueIdListField(serializers.Field):
+    def to_representation(self, value) -> List:
+        queue_list = (
+            {}
+            if not value.queue_order
+            else {int(x) for x in value.queue_order.split(",")}
+        )
+        open_issue_ids = {
+            issue.id
+            for issue in Issue.objects.filter(
+                lab__pk=value.pk, state=OPEN, deleted=False
+            )
+        }
+        updated_list = []
+
+        for id in queue_list:
+            if id in open_issue_ids:
+                # If id is in open_issue_ids, then we don't want to add it again
+                open_issue_ids.remove(id)
+                updated_list.append(id)
+
+        # open_issue_ids is now only open issue IDs that aren't in queue_list
+        updated_list.extend(open_issue_ids)
+
+        if queue_list != updated_list:
+            value.queue_order = ",".join([str(x) for x in updated_list])
+
+        return updated_list
+
+    def to_internal_value(self, data) -> Dict[str, str]:
+        return {"queue_order": data[1:-1].replace(" ", "")}
 
 
 class LabSerializer(serializers.HyperlinkedModelSerializer):
@@ -25,10 +61,11 @@ class LabSerializer(serializers.HyperlinkedModelSerializer):
     check_ins = HyperlinkedIdentityField(
         view_name="check-ins-list", lookup_url_kwarg="lab_pk", lookup_field="pk"
     )
+    queue = IssueIdListField(source="*")
 
     class Meta:
         model = Lab
-        fields = ["id", "url", "issues", "experiments", "check_ins"]
+        fields = ["id", "url", "issues", "experiments", "check_ins", "queue"]
 
 
 class ExperimentSerializer(serializers.HyperlinkedModelSerializer):
@@ -141,9 +178,7 @@ class CheckInSerializer(serializers.HyperlinkedModelSerializer):
         instance = CheckIn.objects.create(**validated_data, lab=lab)
         instance.experiments.set(
             Experiment.objects.filter(
-                lab__pk=context_kwargs["lab_pk"],
-                deleted=False,
-                state="ACTIVE",
+                lab__pk=context_kwargs["lab_pk"], deleted=False, state="ACTIVE",
             )
         )
         return instance
