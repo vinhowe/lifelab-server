@@ -21,16 +21,16 @@ from api.models import (
 class IssueIdListField(serializers.Field):
     def to_representation(self, value) -> List:
         queue_list = (
-            {}
+            []
             if not value.queue_order
-            else {int(x) for x in value.queue_order.split(",")}
+            else [int(x) for x in value.queue_order.split(",")]
         )
-        open_issue_ids = {
+        open_issue_ids = [
             issue.id
             for issue in Issue.objects.filter(
                 lab__pk=value.pk, state=OPEN, deleted=False
             )
-        }
+        ]
         updated_list = []
 
         for id in queue_list:
@@ -44,11 +44,18 @@ class IssueIdListField(serializers.Field):
 
         if queue_list != updated_list:
             value.queue_order = ",".join([str(x) for x in updated_list])
+            value.save()
 
         return updated_list
 
     def to_internal_value(self, data) -> Dict[str, str]:
-        return {"queue_order": data[1:-1].replace(" ", "")}
+        internal_value = None
+        if isinstance(data, list):
+            internal_value = ",".join([str(x) for x in data])
+        elif isinstance(data, str):
+            internal_value = data[1:-1].replace(" ", "")
+
+        return {"queue_order": internal_value}
 
 
 class LabSerializer(serializers.HyperlinkedModelSerializer):
