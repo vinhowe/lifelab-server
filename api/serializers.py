@@ -87,6 +87,15 @@ class ExperimentSerializer(serializers.HyperlinkedModelSerializer):
     terms = serializers.CharField(
         max_length=MAX_BODY_TEXT_LENGTH, allow_blank=True, required=False
     )
+    issues = NestedHyperlinkedRelatedField(
+        many=True,
+        queryset=Issue.objects.all(),
+        view_name="issues-detail",
+        parent_lookup_kwargs={"lab_pk": "lab__pk"},
+        lookup_url_kwarg="number",
+        lookup_field="number",
+        required=False,
+    )
 
     def create(self, validated_data):
         context_kwargs = self.context["view"].kwargs
@@ -106,6 +115,7 @@ class ExperimentSerializer(serializers.HyperlinkedModelSerializer):
             "terms",
             "created",
             "end_date",
+            "issues",
             "lab",
             "deleted",
         ]
@@ -151,9 +161,9 @@ class IssueSerializer(serializers.HyperlinkedModelSerializer):
             "state",
             "title",
             "description",
-            "experiments",
             "created",
             "comments",
+            "experiments",
             "lab",
             "deleted",
         ]
@@ -185,7 +195,9 @@ class CheckInSerializer(serializers.HyperlinkedModelSerializer):
         instance = CheckIn.objects.create(**validated_data, lab=lab)
         instance.experiments.set(
             Experiment.objects.filter(
-                lab__pk=context_kwargs["lab_pk"], deleted=False, state="ACTIVE",
+                lab__pk=context_kwargs["lab_pk"],
+                deleted=False,
+                state="ACTIVE",
             )
         )
         return instance
