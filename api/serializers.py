@@ -96,6 +96,15 @@ class ExperimentSerializer(serializers.HyperlinkedModelSerializer):
         lookup_field="number",
         required=False,
     )
+    check_ins = NestedHyperlinkedRelatedField(
+        many=True,
+        queryset=CheckIn.objects.all(),
+        view_name="check-ins-detail",
+        parent_lookup_kwargs={"lab_pk": "lab__pk"},
+        lookup_url_kwarg="number",
+        lookup_field="number",
+        required=False,
+    )
 
     def create(self, validated_data):
         context_kwargs = self.context["view"].kwargs
@@ -118,8 +127,9 @@ class ExperimentSerializer(serializers.HyperlinkedModelSerializer):
             "issues",
             "lab",
             "deleted",
+            "check_ins",
         ]
-        read_only_fields = ["lab", "created"]
+        read_only_fields = ["lab", "created", "check_ins"]
 
 
 class IssueSerializer(serializers.HyperlinkedModelSerializer):
